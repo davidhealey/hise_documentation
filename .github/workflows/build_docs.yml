@@ -1,0 +1,37 @@
+name: Build Docs
+on: 
+  workflow_dispatch:
+  push:
+    branches: 
+      - master
+    tags:
+      - '*'
+jobs:
+  build_docs:
+    runs-on: [self-hosted, windows]
+    steps:
+      - name: Cleanup working directory
+        working-directory: ${{ github.workspace }}
+        run: del *.* /Q /S
+        shell: cmd
+      - name: Checkout doc repository repository
+        uses: actions/checkout@v1
+        with:
+          ref: 'master'
+      - name: Clone snippet directory
+        uses: sudosubin/git-clone-action@v1.0.1
+        with:
+          repository: qdr/HiseSnippetDB
+          path: '/hise_snippets'
+      - name: Download Assets from release
+        uses: robinraju/release-downloader@v1.11
+        with:
+          repository: qdr/HiseSnippetDB
+          latest: true
+          fileName: 'Assets.zip'
+          out-file-path: './hise_snippets/Assets'
+          extract: true
+      - name: Run HISE CI build to create docs
+        run: build.bat
+        shell: cmd
+      

@@ -76,10 +76,9 @@ In addition to the timestretching mode, there are several other options which al
 | Property | Type | Default | Description |
 | -- | - | -- | -------- |
 | `Mode` | `String` | `"Disabled"` | the timestretching mode (as described above). Changing this mode will kill all voices and refresh the voice states on the background thread. |
-| `SkipLatency` | `bool` | `false` | If true, starting a new voice will skip the inherent latency of the timestretching algorithm. This vastly improves the timing of the voice, however it comes with a pretty steep CPU overhead because it has to (silently) calculate the timestretched signal for the duration of the latency (about 50ms). |
+| `SkipLatency` | `bool` | `false` | If false, the voice start will be delayed by a short amount of time. If true, the voice start will be executed immediately and cause a pretty big spike in CPU usage (see below for a detailed explanation). |
 | `NumQuarters` | `double` | `0.0` | if this is not 0.0, it will skip the automatic detection of the sample length when in tempo-synced mode and use this value to determine the BPM of the source sample (so you will need to set this to the value of your loop lengths). |
 | `Tonality` | `double` | `0.0` | This value allows you to [retain the timbre](https://signalsmith-audio.co.uk/code/stretch/#how-to-use-pitch-shifting) when using pitch transposition. |
-
 
 Be aware that there is no UI interface for these properties in HISE (except for the mode). Instead, you will have to use the scripting API calls that query and set these properties from a JSON object.
 
@@ -90,12 +89,80 @@ const var obj = Sampler.getTimestretchOptions();
 // print out all properties
 Console.print(trace(obj));
 
-// Apply your changed
+// Apply your changes
 obj.SkipLatency = true;
 
 // Update the options
 Sampler.setTimestretchOptions(obj);
 ```
+
+#### The `SkipLatency` property
+
+Until HISE 4.1.0 the SkipLatency property (that is set to `false` as default) introduced a very big latency at the start of the voice:
+
+![](https://forum.hise.audio/assets/uploads/files/1728557959510-testfull.png)
+
+The rationale was to keep the CPU spikes in check:
+
+![](https://forum.hise.audio/assets/uploads/files/1728558366002-98171806-906d-44a8-8521-5bf17a5d6217-image.png)
+
+If you set SkipLatency to `true`, then it will feed the first 4096 samples into the timestretch engine so that the voice will start rendering the sample right away:
+
+![](https://forum.hise.audio/assets/uploads/files/1728557860512-latencysync.png)
+
+But that workload at the voice start caused a very big CPU spike that is not very reassuring:
+
+![](https://forum.hise.audio/assets/uploads/files/1728558426675-675b83cf-9ff1-40bf-8447-7b44d1b10b83-image.png)
+
+This basically gave you the option between
+
+1. it being unusable because the latency is ridiculously high and
+2. it being unusable because the CPU spike is ridiculously high
+
+so it effectively made the timestretching engine sit around collecting dust. In order to solve that problem, I had to ditch the first option (introducing the latency) and replace it with something that has a reasonable amount of latency but without blowing up the CPU. This was achieved by the following routine:
+
+- when a voice is started, it will not start rendering the output. 
+- instead it will fire up the background thread that is usually busy shuffling and preparing data from the hard drive and tell it to process the first 50ms As Fast As Possible (tm).
+- when the task is done, the voice can start rendering the data right from the start. 
+
+With this approach, you'll get no CPU spikes (on the audio thread) and a reasonably low latency:
+
+![](https://forum.hise.audio/assets/uploads/files/1728558026597-latencylazy.png)
+
+![](https://forum.hise.audio/assets/uploads/files/1728558266133-fee5a576-0128-442e-9f3c-ed0d0eb4c260-image.png)
+
+How low is the latency? This depends on how fast the background thread can be scheduled and finish its task, but it usually happens within 1-2 audio buffers. My initial tests yielded an average latency of around 270 samples (with 512 samples buffer size)
+
+> Be aware that when you run your plugin in offline mode (eg. if you use the bounce to disk feature), it always uses the synchronous option of directly calculating the voice start since there are no realtime requirements in this scenario.
+
+
+## Release Start
+
+![](/images/custom/releasestart.png)
+
+This is a new feature in HISE 4.1.0 and allows you to use the natural trail of a sustain sample as release sample without having to chop the sample and setup a second sampler with the release trigger logic. You can enable this by setting the **ReleaseStart** value to a non-zero value. If that is the case, then the sample will be played normally, but as soon as you release the key, it will seek to the position you specified and play it back until the end. This works with disk-streaming, HLAC multimics & loops so it can be used in any configuration that you run the sampler with. Note that for performance reasons, HISE tries to deactivate the entire logic until at least a single sample of a samplemap uses this feature, then it assumes that all samples use this feature. Also the memory usage will be increased as it requires another preload buffer for each sample at the release position.
+
+> If you use that feature make sure to use a gain envelope with a long release time as the envelope release will fade out the release trail otherwise.
+
+The native implementation of this features direct into the streaming engine allows special modes that improve the smoothness of the fade between sustain part & release trail. You can specify the length of the fade, the gamma curve as well as whether it should apply gain matching to reduce the volume bump.
+
+### Release Start Options
+
+The interface to setting the release start options is the same as the time stretching algorithm: There is no UI, instead you need to query and set a JSON object that define the settings using the [scripting API](/scripting/scripting-api/sampler#setreleasestartoptions).
+
+| Property | Type | Default | Description |
+| ---- | - | -- | -------- |
+| `ReleaseFadeTime` | `int` | `4096` | The fade time in samples. The sample rate is derived from the sample not the audio processing rate. |
+| `FadeGamma` | `float` | `1.0` | The gamma curve for the fade. `1.0` means linear and other values will create a curve using the `output = Math.pow(input, gamma)` formula. The values for the gamma curve must lie between `0.125` and `4.0` |
+| `UseAscendingZeroCrossing` | `bool` | `false` | if true, then the start of the fade will wait until the sample goes through the next positive zero crossing (from negative to positive). If you set the release start position correctly (also a positive zero crossing), then it makes sure that the start of the fade is phase-aligned. |
+| `GainMatchingMode` | `String` | `None` | This setting will define how the sample tries to blend the fade between sustain and release phase. These options are available: `["None", "Volume", "Offset"]`. **Volume** will monitor the peaks of the sample while playing back, and then apply a constant gain factor to the release tail to match the current volume. **Offset** will jump into the release tail to skip the louder part if the current gain is low (coming soon). |
+| `PeakSmoothing` | `float` | `0.96` | The filter coefficient for smoothing the volume detection of the currently playing sample. This **must** be a number below 1.0 and the higher the number the slower the max peak will change. |
+
+Do you remember when I told you that there is no UI? I was lying. There is in fact a popup window that allows you to change the values of the setting properties on the fly (in the sample editor, next to the loop improve icon):
+
+![](/images/custom/releasestartpopup.png)
+
+This allows you to check different options quicker during development, but remember that in order to make persistent setting changes, you will still have to use the API call (but there's a quick shortcut that creates the script lines for you in the popup).
 
 ## Compress and Export
 
