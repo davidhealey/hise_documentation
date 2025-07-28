@@ -6,8 +6,21 @@ modified: 24.06.2019
 index:    06
 ---
 
+![scriptnode-start](/images/interface/scriptnode-start.png)
 
-## Introduction
+With Scriptnode you get access to a full fledged modular DSP toolkit for building [DSP networks](/scriptnode/manual/glossary#dsp-network) that can be inserted into the HISE audio chain.
+
+Add one of the following **Script** audio modules to the [Module Tree](/working-with-hise/hise-interface/left-panel/module-tree), create a DSP network and start adding [nodes](/scriptnode/list) to it.
+
+- [Script FX](/hise-modules/effects/list/scriptfx) - Use a DSP network in the FX Chain as a monophonic effect.
+- [Polyphonic Script FX](/hise-modules/effects/list/polyscriptfx) - Use a DSP network in the FX chain of a sound generator as a polyphonic effect.
+- [Scriptnode Synthesiser](/hise-modules/sound-generators/list/scriptsynth) - Use the MIDI input to build a multivoice Scriptnode synthesiser
+
+Add **Script Modulators** to the Modulation Chain to build customized modulation signals:
+- [Script Time Variant Modulator](/hise-modules/modulators/time-variant-modulators/list/scripttimevariantmodulator) - create a monophonic time-variant modulation signal with a DSP network
+- [Script Envelope Modulator](/hise-modules/modulators/envelopes/list/scriptenvelopemodulator)- create a polyphonic time-variant modulation signal with a DSP network.
+
+## Rationale
 
 **HISE** started as a toolkit for developing sample based virtual instruments (hence the name: *Hart Instruments Sampler Engine*). The first features were a module for low overhead streaming of audio samples and a scripting engine that allowed customization of the MIDI processing.
 
@@ -30,7 +43,7 @@ So this is the workflow that can be used to achieve Cpp performance while keepin
 
 A little example: If you use 3 addition nodes like this:
 
-![additions.png](../images/custom/scriptnode/additions.png)
+![additions.png](/images/custom/scriptnode/additions.png)
 
 the interpreter will have to calculate three nodes individually. The generated Cpp code will boil them down to a single assembly instruction:
 

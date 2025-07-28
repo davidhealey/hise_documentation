@@ -15,7 +15,7 @@ The samples can be arranged in a three-dimensional map to account for Note numbe
 
 - Put your samples in the projects [Samples](/working-with-hise/project-management/projects-folders/samples) Folder.
 - Create a Sampler and map and save your samples into a `.xml` SampleMap with its [Map Editor](/ui-components/floating-tiles/hise/samplemapeditor). The saved SampleMaps will show up in the projects [SampleMaps](/working-with-hise/project-management/projects-folders/sample-maps) Folder. 
-- Collect an compress all samples in a SampleMap with the [HISE Lossless Audio Codec](sampler.html#Export-to-HLAC-Monolith) (`.ch1`) into a single monolith file. 
+- Collect an compress all samples in a SampleMap with the [HISE Lossless Audio Codec](/hise-modules/sound-generators/list/streamingsampler#export-to-hlac-(monolith)) (`.ch1`) into a single monolith file. 
 - When the development of the plugin is ready, all HLAC monolith files can be bundled in a [HISE Resource](/hise-modules/sound-generators/list/streamingsampler#hise-resources-archive-file) (`.hr1`) Archive File, that can be distributed to the user. 
 
 
@@ -23,10 +23,10 @@ The samples can be arranged in a three-dimensional map to account for Note numbe
 
 The Sampler features four special edit tabs:
 
-- [Sampler Settings](/working-with-hise/workspaces/sampler-workspace/sample-settings)
-- [Sample Editor](/working-with-hise/workspaces/sampler-workspace/sample-editor)
-- [Map Editor](/working-with-hise/workspaces/sampler-workspace/sample-map-editor)
-- [Table View](/working-with-hise/workspaces/sampler-workspace/sample-table)
+- [Sampler Settings](/working-with-hise/hise-interface/sampler-workspace/sample-settings)
+- [Sample Editor](/working-with-hise/hise-interface/sampler-workspace/sample-editor)
+- [Map Editor](/working-with-hise/hise-interface/sampler-workspace/sample-map-editor)
+- [Table View](/working-with-hise/hise-interface/sampler-workspace/sample-table)
 
 Additional to the default chains, it features two extra [Modulation Chains](/hise-modules/sound-generators/list/streamingsampler#chains-) to modulate the **Sample Start** of samples and the **Group Fade** between different RRGroups.
 

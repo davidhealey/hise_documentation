@@ -5,11 +5,11 @@ author:   Christoph Hart
 modified: 18.07.2023
 ---
   
-This node will analyse the spectrum of the audio signal and display a FFT graph. If you want to show the spectrum on your main user interface, you need to register it as an external DisplayBuffer, then grab a [reference](/scripting/scripting-api/displaybuffersource) to it and [render](/scripting/scripting-api/scriptringbuffer#createpath) the output.
+This node will analyse the spectrum of the audio signal and display a FFT graph. If you want to show the spectrum on your main user interface, you need to register it as an external DisplayBuffer, then grab a [reference](/scripting/scripting-api/displaybuffersource) to it and render the output.
 
 ### Changing FFT properties
 
-You can change the FFT properties (window type, FFT size, decibel range etc) by supplying a JSON object and passing it to [this method](/scripting/scripting-api/scriptringbuffer#setringbufferproperties).  
+You can change the FFT properties (window type, FFT size, decibel range etc) by supplying a JSON object and passing it to [this method](/scripting/scripting-api/displaybuffer#setringbufferproperties).  
 The default FFT property object is:
 
 ```javascript
